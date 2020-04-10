@@ -1,6 +1,6 @@
 { pkgs ? import <nixos> {} }:
 pkgs.stdenv.mkDerivation rec {
-  name = "lgj20";
+  name = "eftd";
   src = ./.;
   env = pkgs.buildEnv { name = name; paths = buildInputs; };
   buildInputs = [
