@@ -4,6 +4,16 @@
 
 (in-package :flee-the-deep)
 
+(defclass tile ()
+  ((display-char
+    :type 'standard-char
+    :initform #\.
+    :accessor display-char)
+   (occupiable
+    :type 'boolean
+    :initform t
+    :accessor occupiable)))
+
 (defclass creature ()
   ((name
     :initarg :name
@@ -29,7 +39,7 @@
       (dotimes (y width)
         (charms:write-char-at-point
          window
-         (aref map-arr x y)
+         (display-char (aref map-arr x y))
          x y)))))
 
 (defun draw-player (window)
@@ -39,10 +49,18 @@
   (draw-map map-arr window)
   (draw-player window))
 
+(defun check-destination-tile (x y map-arr)
+  (if (or (> x (array-dimension map-arr 0))
+          (< x 0)
+          (> y (array-dimension map-arr 1))
+          (< y 0))
+      nil
+      (occupiable (aref map-arr x y))))
+
 (defun move-player (x y map-arr)
   (let ((new-x (+ x (x-coord *player*)))
         (new-y (+ y (y-coord *player*))))
-    (when (ignore-errors (aref map-arr new-x new-y))
+    (when (check-destination-tile new-x new-y map-arr)
       (with-accessors ((x x-coord) (y y-coord)) *player*
         (setf x new-x y new-y)))))
 
@@ -61,6 +79,7 @@
 
 (defun main ()
   (charms:with-curses ()
+    (charms/ll:curs-set 0)
     (charms:disable-echoing)
     (charms:enable-raw-input :interpret-control-characters t)
     (charms:clear-window charms:*standard-window*)
@@ -68,8 +87,11 @@
         (charms:window-dimensions charms:*standard-window*)
       (let ((map-arr (make-array
                       `(,height ,width)
-                      :element-type 'standard-char
-                      :initial-element #\.)))
+                      :element-type 'tile)))
+        ;; initialize the array with differenct elements
+        (dotimes (x (array-dimension map-arr 0))
+          (dotimes (y (array-dimension map-arr 1))
+            (setf (aref map-arr x y) (make-instance 'tile))))
         (loop named game-loop do
           (when (eq 'quit
                     (game-loop map-arr))
