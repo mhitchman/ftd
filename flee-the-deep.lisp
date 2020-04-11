@@ -54,6 +54,11 @@
     ((#\d) (move-player 1 0 map-arr))
     ((#\q) 'quit)))
 
+(defun game-loop (map-arr)
+  (draw map-arr charms:*standard-window*)
+  (process-input
+   (charms:get-char charms:*standard-window*) map-arr))
+
 (defun main ()
   (charms:with-curses ()
     (charms:disable-echoing)
@@ -61,14 +66,12 @@
     (charms:clear-window charms:*standard-window*)
     (multiple-value-bind (height width)
         (charms:window-dimensions charms:*standard-window*)
-      (loop named game-loop do
-        (when (eq 'quit (let ((map-arr (make-array
-                                        `(,height ,width)
-                                        :element-type 'standard-char
-                                        :initial-element #\.)))
-                          (draw map-arr charms:*standard-window*)
-                          (process-input
-                           (charms:get-char charms:*standard-window*)
-                           map-arr)))
-          (return-from game-loop))
-        (charms:refresh-window charms:*standard-window*)))))
+      (let ((map-arr (make-array
+                      `(,height ,width)
+                      :element-type 'standard-char
+                      :initial-element #\.)))
+        (loop named game-loop do
+          (when (eq 'quit
+                    (game-loop map-arr))
+            (return-from game-loop))
+          (charms:refresh-window charms:*standard-window*))))))
