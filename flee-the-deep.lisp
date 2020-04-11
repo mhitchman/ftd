@@ -50,9 +50,9 @@
   (draw-player window))
 
 (defun check-destination-tile (x y map-arr)
-  (if (or (> x (array-dimension map-arr 0))
+  (if (or (> x (1- (array-dimension map-arr 0)))
           (< x 0)
-          (> y (array-dimension map-arr 1))
+          (> y (1- (array-dimension map-arr 1)))
           (< y 0))
       nil
       (occupiable (aref map-arr x y))))
