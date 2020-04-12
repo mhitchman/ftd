@@ -34,9 +34,9 @@
 (defparameter *player* (make-creature 'player 0 0 #\@))
 
 (defun draw-map (map-arr window)
-  (destructuring-bind (height width) (array-dimensions map-arr)
-    (dotimes (x height)
-      (dotimes (y width)
+  (destructuring-bind (width height) (array-dimensions map-arr)
+    (dotimes (x width)
+      (dotimes (y height)
         (charms:write-char-at-point
          window
          (display-char (aref map-arr x y))
@@ -83,15 +83,12 @@
     (charms:disable-echoing)
     (charms:enable-raw-input :interpret-control-characters t)
     (charms:clear-window charms:*standard-window*)
-    (multiple-value-bind (height width)
+    (multiple-value-bind (width height)
         (charms:window-dimensions charms:*standard-window*)
       (let ((map-arr (make-array
-                      `(,height ,width)
-                      :element-type 'tile)))
-        ;; initialize the array with differenct elements
-        (dotimes (x (array-dimension map-arr 0))
-          (dotimes (y (array-dimension map-arr 1))
-            (setf (aref map-arr x y) (make-instance 'tile))))
+                      `(,width ,height)
+                      :element-type 'tile
+                      :initial-element (make-instance 'tile))))
         (loop named game-loop do
           (when (eq 'quit
                     (game-loop map-arr))
