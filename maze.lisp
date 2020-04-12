@@ -8,7 +8,11 @@
            'horizontal
            'vertical))))
 
-(defun gen-maze (map-arr x y width height resolution floor-tile wall-tile)
+(defun gen-maze (map-arr
+                 x y
+                 width height
+                 resolution
+                 floor-tile wall-tile)
   (when (or (<= width resolution)
             (<= height resolution))
     (return-from gen-maze))
@@ -20,29 +24,38 @@
                           (+ (random (- height 2)) 1)
                           0)))
          (door-x (+ wall-x (if (eq orientation 'horizontal)
-                               (random width)
+                               (random (1- width))
                                0)))
          (door-y (+ wall-y (if (eq orientation 'horizontal)
                                0
-                               (random height))))
+                               (random (1- height)))))
          (dx (if (eq orientation 'horizontal) 1 0))
          (dy (if (eq orientation 'horizontal) 0 1))
          (wall-length (if (eq orientation 'horizontal) width height)))
+    
+    ;; special don't block doors
+    ;; (if (eq orientation 'horizontal)
+    ;;     (when (= prev-door-y wall-y)
+    ;;       (setf door-x (1- (+ x width))))
+    ;;     (when (= prev-door-x wall-x)
+    ;;       (setf door-y (1- (+ y height)))))
+    
     ;; draw the wall
     (dotimes (i wall-length)
       (setf (aref map-arr wall-x wall-y) wall-tile)
-      ;; (draw-map map-arr *stand-win*)
-      ;; (charms:refresh-window *stand-win*)
-      ;; (break)
       (incf wall-x dx)
       (incf wall-y dy))
 
     
     (setf (aref map-arr door-x door-y) floor-tile)
-
-    (draw-map map-arr *stand-win*)
-    (charms:refresh-window *stand-win*)
-    (break)
+    (setf (aref map-arr
+                (if (eq orientation 'horizontal)
+                    (1+ door-x)
+                    door-x)
+                (if (eq orientation 'horizontal)
+                    door-y
+                    (1+ door-y)))
+          floor-tile)
     (let ((nx x)
           (ny y)
           (w (if (eq orientation 'horizontal)
@@ -51,7 +64,11 @@
           (h (if (eq orientation 'horizontal)
                  (- wall-y y)
                  height)))
-      (gen-maze map-arr nx ny w h resolution floor-tile wall-tile))
+      (gen-maze map-arr
+                nx ny
+                w h
+                resolution
+                floor-tile wall-tile))
     (let ((nx (if (eq orientation 'horizontal)
                   x
                   (1+ wall-x)))
@@ -64,4 +81,8 @@
           (h (if (eq orientation 'horizontal)
                  (1- (- (+ y height) wall-y))
                  height)))
-      (gen-maze map-arr nx ny w h resolution floor-tile wall-tile))))
+      (gen-maze map-arr
+                nx ny
+                w h
+                resolution
+                floor-tile wall-tile))))

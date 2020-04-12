@@ -7,12 +7,17 @@
 (defclass tile ()
   ((display-char
     :type 'standard-char
+    :initarg :display-char
     :initform #\.
-    :accessor display-char)
+    :reader display-char)
    (occupiable
     :type 'boolean
+    :initarg :occupiable
     :initform t
-    :accessor occupiable)))
+    :reader occupiable)))
+
+(defun make-wall-tile ()
+  (make-instance 'tile :display-char #\# :occupiable nil))
 
 (defclass creature ()
   ((name
@@ -77,6 +82,15 @@
   (process-input
    (charms:get-char charms:*standard-window*) map-arr))
 
+(defun create-border (map-arr tile)
+  (destructuring-bind (width height) (array-dimensions map-arr)
+    (dotimes (x width)
+      (setf (aref map-arr x 0) tile
+            (aref map-arr x (1- height)) tile))
+    (dotimes (y height)
+      (setf (aref map-arr 0 y) tile
+            (aref map-arr (1- width) y) tile))))
+
 (defun main ()
   (charms:with-curses ()
     (charms/ll:curs-set 0)
@@ -88,7 +102,15 @@
       (let ((map-arr (make-array
                       `(,width ,height)
                       :element-type 'tile
-                      :initial-element (make-instance 'tile))))
+                      :initial-element (make-instance 'tile)))
+            (wall-tile (make-wall-tile)))
+        ;; (create-border map-arr wall-tile)
+        (gen-maze map-arr 0 0
+                  width
+                  height
+                  2
+                  (aref map-arr 0 0)
+                  wall-tile)
         (loop named game-loop do
           (when (eq 'quit
                     (game-loop map-arr))
