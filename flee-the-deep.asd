@@ -1,6 +1,7 @@
 (defsystem "flee-the-deep"
     :depends-on ("cl-charms")
-    :components ((:file "flee-the-deep")))
+  :components ((:file "maze")
+               (:file "flee-the-deep")))
 
 (defsystem "flee-the-deep/executable"
     :build-operation program-op
