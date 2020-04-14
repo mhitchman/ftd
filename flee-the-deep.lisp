@@ -1,14 +1,10 @@
-(defpackage :flee-the-deep
-  (:use :common-lisp)
-  (:export #:main))
-
 (in-package :flee-the-deep)
 
 (defclass tile ()
   ((display-char
     :type 'standard-char
     :initarg :display-char
-    :initform #\.
+    :initform #\space
     :reader display-char)
    (occupiable
     :type 'boolean
@@ -36,7 +32,23 @@
 (defun make-creature (name x y display-char)
   (make-instance 'creature :name name :x-coord x :y-coord y :display-char display-char))
 
-(defparameter *player* (make-creature 'player 0 0 #\@))
+(defun make-beast (map-arr)
+  (destructuring-bind (width height) (array-dimensions map-arr)
+    (let ((red-width (/ width 2))
+          (start-x)
+          (start-y))
+      ;; get a random empty starting position on the right side of screen
+      (loop named rand-start
+            for x = (+ (random red-width) red-width)
+            for y = (random height)
+            if (occupiable (aref map-arr x y))
+              do (setf start-x x
+                       start-y y)
+              and do (return-from rand-start))
+      (make-creature "beast" start-x start-y #\B))))
+
+(defvar *player*)
+(defvar *beast*)
 
 (defun draw-map (map-arr window)
   (destructuring-bind (width height) (array-dimensions map-arr)
@@ -47,12 +59,17 @@
          (display-char (aref map-arr x y))
          x y)))))
 
-(defun draw-player (window)
-  (charms:write-char-at-point window (display-char *player*) (x-coord *player*) (y-coord *player*)))
+(defun draw-creature (creature window)
+  (charms:write-char-at-point
+   window
+   (display-char creature)
+   (x-coord creature)
+   (y-coord creature)))
 
 (defun draw (map-arr window)
   (draw-map map-arr window)
-  (draw-player window))
+  (draw-creature *player* window)
+  (draw-creature *beast* window))
 
 (defun check-destination-tile (x y map-arr)
   (if (or (> x (1- (array-dimension map-arr 0)))
@@ -69,6 +86,59 @@
       (with-accessors ((x x-coord) (y y-coord)) *player*
         (setf x new-x y new-y)))))
 
+(defun player-in-sight-p (map-arr)
+  "Draw a line to the player and see if anything is in the way"
+  ;; direction = check direction to x: player-x - beast-x ^ 0
+  ;; slope = linear interpolation beast pos and player pos
+  ;; beast-x + direction and beast-y + slope
+  (let* ((player-x (x-coord *player*))
+         (player-y (y-coord *player*))
+         (beast-x (x-coord *beast*))
+         (beast-y (y-coord *beast*))
+         (dir (expt (- player-x beast-x) 0))
+         (slope (/ (- player-y beast-y) (- player-x beast-x))))
+    (loop named ray
+          with x = (+ beast-x dir)
+          with y = (+ beast-y slope) do
+            (cond ((not (occupiable (aref map-arr x (round y))))
+                   (return-from ray
+                     (values nil (list 0 0))))
+                  ((and (= player-x x)
+                        (= player-y y))
+                   (return-from ray
+                     (values nil (list dir (round slope)))))
+                  (t (+ x dir)
+                     (+ y slope))))))
+
+(defun beast-random-pos (map-arr)
+  "Returns a random position that the beast can move to that is occupiable"
+  (let* ((dir '((0 1)
+                (0 -1)
+                (1 0)
+                (-1 0)))
+         (beast-pos (list (x-coord *beast*)
+                          (y-coord *beast*)))
+         (new-positions (loop for x in dir
+                              collect (mapcar #'+ x beast-pos))))
+    (setf new-positions
+          (remove-if
+           (lambda (position)
+             (not (occupiable
+                   (aref map-arr (car position) (cadr position)))))
+           new-positions))
+    (nth (random (length new-positions)) new-positions)))
+
+(defun player-in-sight-p (map-arr)      ;
+  (values nil '(0 0)))
+
+(defun move-beast (map-arr)
+  (multiple-value-bind (in-sight direction) (player-in-sight-p map-arr)
+    (destructuring-bind (new-x new-y) (if in-sight
+                                          direction
+                                          (beast-random-pos map-arr))
+      (setf (x-coord *beast*) new-x
+            (y-coord *beast*) new-y))))
+
 (defun process-input (input-char map-arr)
   (case input-char
     ((#\w) (move-player 0 -1 map-arr))
@@ -77,10 +147,18 @@
     ((#\d) (move-player 1 0 map-arr))
     ((#\q) 'quit)))
 
+(defun game-over-p ()
+  "Game over when beast and player occupy the same space"
+  (and (= (x-coord *beast*) (x-coord *player*))
+       (= (y-coord *beast*) (y-coord *player*))))
+
 (defun game-loop (map-arr)
+  (move-beast map-arr)
   (draw map-arr charms:*standard-window*)
+  (when (game-over-p)
+    (return-from game-loop 'game-over))
   (process-input
-   (charms:get-char charms:*standard-window*) map-arr))
+   (charms:get-char charms:*standard-window* :ignore-error t) map-arr))
 
 (defun create-border (map-arr tile)
   (destructuring-bind (width height) (array-dimensions map-arr)
@@ -90,6 +168,11 @@
     (dotimes (y height)
       (setf (aref map-arr 0 y) tile
             (aref map-arr (1- width) y) tile))))
+
+(defun display-game-over ()
+  (charms:clear-window charms:*standard-window*)
+  (charms:write-string-at-point charms:*standard-window* "Game over!" 0 0)
+  (charms:get-char charms:*standard-window*))
 
 (defun main ()
   (charms:with-curses ()
@@ -103,16 +186,19 @@
                       `(,width ,height)
                       :element-type 'tile
                       :initial-element (make-instance 'tile)))
-            (wall-tile (make-wall-tile)))
-        ;; (create-border map-arr wall-tile)
-        (gen-maze map-arr 0 0
-                  width
-                  height
-                  2
-                  (aref map-arr 0 0)
+            (wall-tile (make-wall-tile))
+            (*player* (make-creature 'player 1 1 #\@)))
+        (create-border map-arr wall-tile)
+        (gen-maze map-arr 1 1
+                  (- width 2)
+                  (- height 2)
+                  4
+                  (aref map-arr 1 1)
                   wall-tile)
-        (loop named game-loop do
-          (when (eq 'quit
-                    (game-loop map-arr))
-            (return-from game-loop))
-          (charms:refresh-window charms:*standard-window*))))))
+        (setf *beast* (make-beast map-arr))
+        (loop named game-loop for result = (game-loop map-arr) do
+          (progn (charms:refresh-window charms:*standard-window*)
+                 (cond  ((eq 'quit result) (return-from game-loop))
+                        ((eq 'game-over result)
+                         (display-game-over)
+                         (return-from game-loop)))))))))
