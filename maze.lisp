@@ -1,4 +1,4 @@
-(in-package "flee-the-deep")
+(in-package :flee-the-deep)
 
 (defun get-orientation (width height)
   (cond
