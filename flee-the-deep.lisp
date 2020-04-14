@@ -86,6 +86,34 @@
       (with-accessors ((x x-coord) (y y-coord)) *player*
         (setf x new-x y new-y)))))
 
+(defun calc-slope (x1 y1 x2 y2)
+  (let ((y (- y1 y2))
+        (x (- x1 x2)))
+    (if (or (zerop y) (zerop x))
+        0
+        (/ y x))))
+
+
+(defun al-player-in-sight-p (map-arr)
+  (let ((player-x (x-coord *player*))
+        (player-y (y-coord *player*))
+        (beast-x (x-coord *beast*))
+        (beast-y (y-coord *beast*)))
+    (if (loop named ray with v = 0.01 do
+      (let ((x (round (alexandria:lerp v beast-x player-x)))
+            (y (round (alexandria:lerp v beast-y player-y))))
+        (cond ((not (occupiable (aref map-arr x y)))
+               (return-from ray nil))
+              ((and (= player-x x) (= player-y y))
+               (return-from ray
+                 (values t))))
+        (incf v 0.01)))
+        (values t (list (+ beast-x (alexandria:clamp
+                                    (- player-x beast-x) -1 1))
+                        (+ beast-y (alexandria:clamp
+                                    (- player-y beast-y) -1 1))))
+        (values nil '(0 0)))))
+
 (defun player-in-sight-p (map-arr)
   "Draw a line to the player and see if anything is in the way"
   ;; direction = check direction to x: player-x - beast-x ^ 0
@@ -95,49 +123,45 @@
          (player-y (y-coord *player*))
          (beast-x (x-coord *beast*))
          (beast-y (y-coord *beast*))
-         (dir (expt (- player-x beast-x) 0))
-         (slope (/ (- player-y beast-y) (- player-x beast-x))))
+         (dir (alexandria:clamp (- player-x beast-x) -1 1))
+         (slope (calc-slope player-x player-y beast-x beast-y)))
     (loop named ray
           with x = (+ beast-x dir)
-          with y = (+ beast-y slope) do
-            (cond ((not (occupiable (aref map-arr x (round y))))
+          for y = (+ beast-y (round (* x slope))) do
+            ;; (break)
+            ;; (charms:write-char-at-point charms:*standard-window* #\* x (round y))
+            ;; (charms:refresh-window charms:*standard-window*)
+            (cond ((not (occupiable (aref map-arr x y)))
                    (return-from ray
                      (values nil (list 0 0))))
                   ((and (= player-x x)
                         (= player-y y))
                    (return-from ray
-                     (values nil (list dir (round slope)))))
-                  (t (+ x dir)
-                     (+ y slope))))))
+                     (values t (list dir (alexandria:clamp (- player-y beast-y) -1 1)))))
+                  (t (incf x dir))))))
 
 (defun beast-random-pos (map-arr)
   "Returns a random position that the beast can move to that is occupiable"
-  (let* ((dir '((0 1)
-                (0 -1)
-                (1 0)
-                (-1 0)))
-         (beast-pos (list (x-coord *beast*)
-                          (y-coord *beast*)))
+  (let* ((dir '((0 1) (0 -1) (1 0) (-1 0)))
+         (beast-pos (list (x-coord *beast*) (y-coord *beast*)))
          (new-positions (loop for x in dir
                               collect (mapcar #'+ x beast-pos))))
-    (setf new-positions
-          (remove-if
-           (lambda (position)
-             (not (occupiable
-                   (aref map-arr (car position) (cadr position)))))
-           new-positions))
+    (setf new-positions (remove-if
+                         (lambda (position)
+                           (not (occupiable
+                                 (aref map-arr (car position) (cadr position)))))
+                         new-positions))
     (nth (random (length new-positions)) new-positions)))
 
-(defun player-in-sight-p (map-arr)      ;
-  (values nil '(0 0)))
 
 (defun move-beast (map-arr)
-  (multiple-value-bind (in-sight direction) (player-in-sight-p map-arr)
+  (multiple-value-bind (in-sight direction) (al-player-in-sight-p map-arr)
     (destructuring-bind (new-x new-y) (if in-sight
                                           direction
                                           (beast-random-pos map-arr))
-      (setf (x-coord *beast*) new-x
-            (y-coord *beast*) new-y))))
+      (when (occupiable (aref map-arr new-x new-y))
+        (setf (x-coord *beast*) new-x
+              (y-coord *beast*) new-y)))))
 
 (defun process-input (input-char map-arr)
   (case input-char

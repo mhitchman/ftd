@@ -1,5 +1,5 @@
 (defsystem "flee-the-deep"
-  :depends-on ("cl-charms")
+  :depends-on ("alexandria" "cl-charms")
   :serial t
   :components ((:file "packages")
                (:file "maze")
