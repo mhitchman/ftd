@@ -176,6 +176,30 @@
   (and (= (x-coord *beast*) (x-coord *player*))
        (= (y-coord *beast*) (y-coord *player*))))
 
+(defun run-game ()
+  (multiple-value-bind (width height)
+      (charms:window-dimensions charms:*standard-window*)
+    (let ((map-arr (make-array
+                    `(,width ,height)
+                    :element-type 'tile
+                    :initial-element (make-instance 'tile)))
+          (wall-tile (make-wall-tile))
+          (*player* (make-creature 'player 1 1 #\@)))
+      (create-border map-arr wall-tile)
+      (gen-maze map-arr 1 1
+                (- width 2)
+                (- height 2)
+                4
+                (aref map-arr 1 1)
+                wall-tile)
+      (setf *beast* (make-beast map-arr))
+      (loop named game-loop for result = (game-loop map-arr) do
+        (progn (charms:refresh-window charms:*standard-window*)
+               (cond ((eq 'quit result) (return-from game-loop))
+                     ((eq 'game-over result)
+                      (display-game-over)
+                      (return-from game-loop))))))))
+
 (defun game-loop (map-arr)
   (move-beast map-arr)
   (draw map-arr charms:*standard-window*)
@@ -195,8 +219,19 @@
 
 (defun display-game-over ()
   (charms:clear-window charms:*standard-window*)
-  (charms:write-string-at-point charms:*standard-window* "Game over!" 0 0)
+  (multiple-value-bind (width height) (charms:window-dimensions charms:*standard-window*)
+    (let ((format-string (format nil "~~~a:@<Game Over!~~>" width))
+          (y (floor (/ height 2))))
+      (charms:write-string-at-point
+       charms:*standard-window*
+       (format nil format-string) 0 y)))
+  (sleep 1)
   (charms:get-char charms:*standard-window*))
+
+(defun display-title-screen ()
+  (multiple-value-bind (width height) (charms:window-dimensions
+                                       charms:*standard-window*)
+    ()))
 
 (defun main ()
   (charms:with-curses ()
@@ -204,25 +239,4 @@
     (charms:disable-echoing)
     (charms:enable-raw-input :interpret-control-characters t)
     (charms:clear-window charms:*standard-window*)
-    (multiple-value-bind (width height)
-        (charms:window-dimensions charms:*standard-window*)
-      (let ((map-arr (make-array
-                      `(,width ,height)
-                      :element-type 'tile
-                      :initial-element (make-instance 'tile)))
-            (wall-tile (make-wall-tile))
-            (*player* (make-creature 'player 1 1 #\@)))
-        (create-border map-arr wall-tile)
-        (gen-maze map-arr 1 1
-                  (- width 2)
-                  (- height 2)
-                  4
-                  (aref map-arr 1 1)
-                  wall-tile)
-        (setf *beast* (make-beast map-arr))
-        (loop named game-loop for result = (game-loop map-arr) do
-          (progn (charms:refresh-window charms:*standard-window*)
-                 (cond  ((eq 'quit result) (return-from game-loop))
-                        ((eq 'game-over result)
-                         (display-game-over)
-                         (return-from game-loop)))))))))
+    (run-game)))
