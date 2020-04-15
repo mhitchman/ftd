@@ -217,10 +217,13 @@
       (setf (aref map-arr 0 y) tile
             (aref map-arr (1- width) y) tile))))
 
+(defun centre-format-string (width text)
+  (format nil "~~~a:@<~a~~>" width text))
+
 (defun display-game-over ()
   (charms:clear-window charms:*standard-window*)
   (multiple-value-bind (width height) (charms:window-dimensions charms:*standard-window*)
-    (let ((format-string (format nil "~~~a:@<Game Over!~~>" width))
+    (let ((format-string (centre-format-string width "Game Over!"))
           (y (floor (/ height 2))))
       (charms:write-string-at-point
        charms:*standard-window*
@@ -228,10 +231,17 @@
   (sleep 1)
   (charms:get-char charms:*standard-window*))
 
+
 (defun display-title-screen ()
-  (multiple-value-bind (width height) (charms:window-dimensions
-                                       charms:*standard-window*)
-    ()))
+  (let ((width (charms:window-dimensions charms:*standard-window*)))
+    (charms:write-string-at-point charms:*standard-window* (format nil (centre-format-string width "Flee the Deep!")) 0 3)
+    (charms:write-string-at-point charms:*standard-window* (format nil (centre-format-string width "w,a,s,d to move")) 0 6)
+    (charms:write-string-at-point charms:*standard-window* (format nil (centre-format-string width "q to quit")) 0 7)
+    (charms:write-string-at-point charms:*standard-window* (format nil (centre-format-string width "Press any key to start!")) 0 9))
+  (charms:refresh-window charms:*standard-window*)
+  (sleep 0.5)
+  (charms:get-char charms:*standard-window* :ignore-error t))
+
 
 (defun main ()
   (charms:with-curses ()
@@ -239,4 +249,5 @@
     (charms:disable-echoing)
     (charms:enable-raw-input :interpret-control-characters t)
     (charms:clear-window charms:*standard-window*)
+    (display-title-screen)
     (run-game)))
