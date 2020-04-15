@@ -2,6 +2,7 @@
   :depends-on ("alexandria" "cl-charms")
   :serial t
   :components ((:file "packages")
+               (:file "colour")
                (:file "maze")
                (:file "flee-the-deep")))
 

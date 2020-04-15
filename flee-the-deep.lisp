@@ -4,16 +4,20 @@
   ((display-char
     :type 'standard-char
     :initarg :display-char
-    :initform #\space
+    :initform #\.
     :reader display-char)
    (occupiable
     :type 'boolean
     :initarg :occupiable
     :initform t
-    :reader occupiable)))
+    :reader occupiable)
+   (color
+    :initarg :color
+    :initform +grey/black+
+    :reader color)))
 
 (defun make-wall-tile ()
-  (make-instance 'tile :display-char #\# :occupiable nil))
+  (make-instance 'tile :display-char #\# :occupiable nil :color +white/black+))
 
 (defclass creature ()
   ((name
@@ -27,10 +31,13 @@
     :accessor y-coord)
    (display-char
     :initarg :display-char
-    :reader display-char)))
+    :reader display-char)
+   (color
+    :initarg :color
+    :reader color)))
 
-(defun make-creature (name x y display-char)
-  (make-instance 'creature :name name :x-coord x :y-coord y :display-char display-char))
+(defun make-creature (name x y display-char color)
+  (make-instance 'creature :name name :x-coord x :y-coord y :display-char display-char :color color))
 
 (defun make-beast (map-arr)
   (destructuring-bind (width height) (array-dimensions map-arr)
@@ -45,7 +52,7 @@
               do (setf start-x x
                        start-y y)
               and do (return-from rand-start))
-      (make-creature "beast" start-x start-y #\B))))
+      (make-creature "beast" start-x start-y #\B +red/black+))))
 
 (defvar *player*)
 (defvar *beast*)
@@ -54,17 +61,19 @@
   (destructuring-bind (width height) (array-dimensions map-arr)
     (dotimes (x width)
       (dotimes (y height)
-        (charms:write-char-at-point
-         window
-         (display-char (aref map-arr x y))
-         x y)))))
+        (with-color (color (aref map-arr x y))
+          (charms:write-char-at-point
+           window
+           (display-char (aref map-arr x y))
+           x y))))))
 
 (defun draw-creature (creature window)
-  (charms:write-char-at-point
-   window
-   (display-char creature)
-   (x-coord creature)
-   (y-coord creature)))
+  (with-color (color creature)
+    (charms:write-char-at-point
+     window
+     (display-char creature)
+     (x-coord creature)
+     (y-coord creature))))
 
 (defun draw (map-arr window)
   (draw-map map-arr window)
@@ -184,12 +193,12 @@
                     :element-type 'tile
                     :initial-element (make-instance 'tile)))
           (wall-tile (make-wall-tile))
-          (*player* (make-creature 'player 1 1 #\@)))
+          (*player* (make-creature 'player 1 1 #\@ +yellow/black+)))
       (create-border map-arr wall-tile)
       (gen-maze map-arr 1 1
                 (- width 2)
                 (- height 2)
-                4
+                3
                 (aref map-arr 1 1)
                 wall-tile)
       (setf *beast* (make-beast map-arr))
@@ -225,9 +234,9 @@
   (multiple-value-bind (width height) (charms:window-dimensions charms:*standard-window*)
     (let ((format-string (centre-format-string width "Game Over!"))
           (y (floor (/ height 2))))
-      (charms:write-string-at-point
-       charms:*standard-window*
-       (format nil format-string) 0 y)))
+      (charms:write-string-at-point charms:*standard-window*
+                                    (format nil format-string) 0 y)))
+  (charms:refresh-window charms:*standard-window*)
   (sleep 1)
   (charms:get-char charms:*standard-window*))
 
@@ -246,6 +255,7 @@
 (defun main ()
   (charms:with-curses ()
     (charms/ll:curs-set 0)
+    (setup-colors)
     (charms:disable-echoing)
     (charms:enable-raw-input :interpret-control-characters t)
     (charms:clear-window charms:*standard-window*)
