@@ -149,18 +149,43 @@
                      (values t (list dir (alexandria:clamp (- player-y beast-y) -1 1)))))
                   (t (incf x dir))))))
 
+
+(defun player-down-p ()
+  (> (y-coord *player*) (y-coord *beast*)))
+
+(defun player-up-p ()
+  (< (y-coord *player*) (y-coord *beast*)))
+
+(defun player-right-p ()
+  (> (x-coord *player*) (x-coord *beast*)))
+
+(defun player-left-p ()
+  (< (x-coord *player*) (x-coord *beast*)))
+
+
+(defun weighted-random (dirs)
+  (let ((new-direction (loop for dir in dirs
+                             if (cdr dir)
+                               return dir)))
+    (if new-direction
+        (car new-direction)
+        (car (nth (random (length dirs)) dirs)))))
+
 (defun beast-random-pos (map-arr)
   "Returns a random position that the beast can move to that is occupiable"
-  (let* ((dir '((0 1) (0 -1) (1 0) (-1 0)))
+  (let* ((dir `(((0 1) . ,(player-down-p))
+                ((0 -1) . ,(player-up-p))
+                ((1 0) . ,(player-right-p))
+                ((-1 0) . ,(player-left-p))))
          (beast-pos (list (x-coord *beast*) (y-coord *beast*)))
-         (new-positions (loop for x in dir
-                              collect (mapcar #'+ x beast-pos))))
+         (new-positions
+           (loop for x in dir
+                 collect (cons (mapcar #'+ (car x) beast-pos) (cdr x)))))
     (setf new-positions (remove-if
                          (lambda (position)
                            (not (occupiable
-                                 (aref map-arr (car position) (cadr position)))))
-                         new-positions))
-    (nth (random (length new-positions)) new-positions)))
+                                 (aref map-arr (car position) (cadr position))))) new-positions :key #'car))
+    (weighted-random new-positions)))
 
 
 (defun move-beast (map-arr)
