@@ -12,7 +12,7 @@
                  x y
                  width height
                  resolution
-                 floor-tile wall-tile)
+                 floor-tile h-wall-tile v-wall-tile)
   (when (or (<= width resolution)
             (<= height resolution))
     (return-from gen-maze))
@@ -42,7 +42,10 @@
     
     ;; draw the wall
     (dotimes (i wall-length)
-      (setf (aref map-arr wall-x wall-y) wall-tile)
+      (setf (aref map-arr wall-x wall-y)
+            (if (eq orientation'horizontal)
+                h-wall-tile
+                v-wall-tile))
       (incf wall-x dx)
       (incf wall-y dy))
 
@@ -68,7 +71,7 @@
                 nx ny
                 w h
                 resolution
-                floor-tile wall-tile))
+                floor-tile h-wall-tile v-wall-tile))
     (let ((nx (if (eq orientation 'horizontal)
                   x
                   (1+ wall-x)))
@@ -85,4 +88,4 @@
                 nx ny
                 w h
                 resolution
-                floor-tile wall-tile))))
+                floor-tile h-wall-tile v-wall-tile))))

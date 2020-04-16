@@ -16,8 +16,8 @@
     :initform +grey/black+
     :reader color)))
 
-(defun make-wall-tile ()
-  (make-instance 'tile :display-char #\# :occupiable nil :color +white/black+))
+(defun make-wall-tile (char)
+  (make-instance 'tile :display-char char :occupiable nil :color +white/black+))
 
 (defclass creature ()
   ((name
@@ -65,6 +65,10 @@
              (< y height))
         (charms:write-char-at-point window char x y)
         nil)))
+
+
+;; (defun in-view (window map-arr)
+;;   )
 
 
 (defun draw-map (map-arr window)
@@ -230,15 +234,18 @@
                     `(,width ,height)
                     :element-type 'tile
                     :initial-element (make-instance 'tile)))
-          (wall-tile (make-wall-tile))
+          (border-wall-tile (make-wall-tile #\#))
+          (h-wall-tile (make-wall-tile #\-))
+          (v-wall-tile (make-wall-tile #\|))
           (*player* (make-creature 'player 1 1 #\@ +yellow/black+)))
-      (create-border map-arr wall-tile)
+      (create-border map-arr border-wall-tile)
       (gen-maze map-arr 1 1
                 (- width 2)
                 (- height 2)
                 3
                 (aref map-arr 1 1)
-                wall-tile)
+                h-wall-tile
+                v-wall-tile)
       (setf *beast* (make-beast map-arr))
       (loop named game-loop for result = (game-loop map-arr) do
         (progn (charms:refresh-window charms:*standard-window*)
