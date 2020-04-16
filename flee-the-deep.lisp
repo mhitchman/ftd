@@ -57,19 +57,27 @@
 (defvar *player*)
 (defvar *beast*)
 
+(defun safe-write-char (window char x y)
+  "Bounds checking write-char-at-point"
+  (multiple-value-bind (width height) (charms:window-dimensions window)
+    (if (and (< x width)
+             (< y height))
+        (charms:write-char-at-point window char x y)
+        nil)))
+
 (defun draw-map (map-arr window)
   (destructuring-bind (width height) (array-dimensions map-arr)
     (dotimes (x width)
       (dotimes (y height)
         (with-color (color (aref map-arr x y))
-          (charms:write-char-at-point
+          (safe-write-char
            window
            (display-char (aref map-arr x y))
            x y))))))
 
 (defun draw-creature (creature window)
   (with-color (color creature)
-    (charms:write-char-at-point
+    (safe-write-char
      window
      (display-char creature)
      (x-coord creature)
