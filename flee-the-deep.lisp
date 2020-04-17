@@ -41,7 +41,7 @@
 
 (defun make-beast (map-arr)
   (destructuring-bind (width height) (array-dimensions map-arr)
-    (let ((red-width (/ width 2))
+    (let ((red-width (floor (/ width 2)))
           (start-x)
           (start-y))
       ;; get a random empty starting position on the right side of screen
@@ -67,34 +67,66 @@
         nil)))
 
 
-;; (defun in-view (window map-arr)
-;;   )
+(defun p-buff (length)
+  (if (oddp length)
+      (floor (/ length 2))
+      (1- (/ length 2))))
+
+(defun in-view (map-arr window)
+  "Get the area of the map the window can view centred on the player"
+  (multiple-value-bind (w-width w-height) (charms:window-dimensions window)
+    (let* ((x-offset (p-buff w-width))
+           (y-offset (p-buff w-height))
+           (x (- (x-coord *player*) x-offset))
+           (y (- (y-coord *player*) y-offset))
+           (width w-width)
+           (height w-height))
+      (alexandria:maxf x 0)
+      (alexandria:maxf y 0)
+      (alexandria:minf width (array-dimension map-arr 0))
+      (alexandria:minf height (array-dimension map-arr 1))
+      (list x y width height))))
 
 
-(defun draw-map (map-arr window)
-  (destructuring-bind (width height) (array-dimensions map-arr)
-    (dotimes (x width)
-      (dotimes (y height)
-        (with-color (color (aref map-arr x y))
-          (safe-write-char
-           window
-           (display-char (aref map-arr x y))
-           x y))))))
+(defun draw-map (map-arr window corn-x corn-y width height)
+  (dotimes (dx width)
+    (let ((current-x (+ corn-x dx)))
+      (dotimes (dy height)
+        (let ((current-y (+ corn-y dy)))
+          (when (and (< current-x (array-dimension map-arr 0))
+                     (< current-y (array-dimension map-arr 1)))
+            (with-color (color (aref map-arr current-x current-y))
+              (safe-write-char
+               window
+               (display-char (aref map-arr current-x current-y))
+               dx
+               dy))))))))
+
+(defun between-p (num min max)
+  (and (<= min num) (<= num max)))
 
 
-(defun draw-creature (creature window)
-  (with-color (color creature)
-    (safe-write-char
-     window
-     (display-char creature)
-     (x-coord creature)
-     (y-coord creature))))
+(defun draw-creature (creature window
+                      corn-x corn-y
+                      view-width view-height)
+  (let ((creature-x (x-coord creature))
+        (creature-y (y-coord creature)))
+    (when (and (between-p creature-x corn-x (+ corn-x (1- view-width)))
+               (between-p creature-y corn-y (+ corn-y (1- view-height))))
+      (with-color (color creature)
+        (safe-write-char
+         window
+         (display-char creature)
+         (- creature-x corn-x)
+         (-  creature-y corn-y))))))
 
 
 (defun draw (map-arr window)
-  (draw-map map-arr window)
-  (draw-creature *player* window)
-  (draw-creature *beast* window))
+  (destructuring-bind (x y view-width view-height)
+      (in-view map-arr window)
+    (draw-map map-arr window x y view-width view-height)
+    (draw-creature *player* window x y view-width view-height)
+    (draw-creature *beast* window x y view-width view-height)))
 
 
 (defun check-destination-tile (x y map-arr)
@@ -142,9 +174,6 @@
 
 (defun player-in-sight-p (map-arr)
   "Draw a line to the player and see if anything is in the way"
-  ;; direction = check direction to x: player-x - beast-x ^ 0
-  ;; slope = linear interpolation beast pos and player pos
-  ;; beast-x + direction and beast-y + slope
   (let* ((player-x (x-coord *player*))
          (player-y (y-coord *player*))
          (beast-x (x-coord *beast*))
@@ -154,9 +183,6 @@
     (loop named ray
           with x = (+ beast-x dir)
           for y = (+ beast-y (round (* x slope))) do
-            ;; (break)
-            ;; (charms:write-char-at-point charms:*standard-window* #\* x (round y))
-            ;; (charms:refresh-window charms:*standard-window*)
             (cond ((not (occupiable (aref map-arr x y)))
                    (return-from ray
                      (values nil (list 0 0))))
