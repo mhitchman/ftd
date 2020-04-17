@@ -122,6 +122,7 @@
 
 
 (defun draw (map-arr window)
+  (charms:clear-window window)
   (destructuring-bind (x y view-width view-height)
       (in-view map-arr window)
     (draw-map map-arr window x y view-width view-height)
@@ -253,32 +254,32 @@
   (and (= (x-coord *beast*) (x-coord *player*))
        (= (y-coord *beast*) (y-coord *player*))))
 
+(defconstant +map-width+ 40)
+(defconstant +map-height+ 40)
+
 (defun run-game ()
-  (multiple-value-bind (width height)
-      (charms:window-dimensions charms:*standard-window*)
-    (let ((map-arr (make-array
-                    `(,width ,height)
-                    :element-type 'tile
-                    :initial-element (make-instance 'tile)))
-          (border-wall-tile (make-wall-tile #\#))
-          (h-wall-tile (make-wall-tile #\-))
-          (v-wall-tile (make-wall-tile #\|))
-          (*player* (make-creature 'player 1 1 #\@ +yellow/black+)))
-      (create-border map-arr border-wall-tile)
-      (gen-maze map-arr 1 1
-                (- width 2)
-                (- height 2)
-                3
-                (aref map-arr 1 1)
-                h-wall-tile
-                v-wall-tile)
-      (setf *beast* (make-beast map-arr))
-      (loop named game-loop for result = (game-loop map-arr) do
-        (progn (charms:refresh-window charms:*standard-window*)
-               (cond ((eq 'quit result) (return-from game-loop))
-                     ((eq 'game-over result)
-                      (display-game-over)
-                      (return-from game-loop))))))))
+  (let ((map-arr (make-array (list +map-width+ +map-height+)
+                             :element-type 'tile
+                             :initial-element (make-instance 'tile)))
+        (border-wall-tile (make-wall-tile #\#))
+        (h-wall-tile (make-wall-tile #\-))
+        (v-wall-tile (make-wall-tile #\|))
+        (*player* (make-creature 'player 1 1 #\@ +yellow/black+)))
+    (create-border map-arr border-wall-tile)
+    (gen-maze map-arr 1 1
+              (- +map-width+ 2)
+              (- +map-height+ 2)
+              3
+              (aref map-arr 1 1)
+              h-wall-tile
+              v-wall-tile)
+    (setf *beast* (make-beast map-arr))
+    (loop named game-loop for result = (game-loop map-arr) do
+      (progn (charms:refresh-window charms:*standard-window*)
+             (cond ((eq 'quit result) (return-from game-loop))
+                   ((eq 'game-over result)
+                    (display-game-over)
+                    (return-from game-loop)))))))
 
 (defun game-loop (map-arr)
   (move-beast map-arr)
@@ -331,4 +332,5 @@
     (charms:enable-raw-input :interpret-control-characters t)
     (charms:clear-window charms:*standard-window*)
     (display-title-screen)
+    (charms:clear-window charms:*standard-window*)
     (run-game)))
