@@ -21,8 +21,9 @@
   (define-color-pair (+red/black+ 2) charms/ll:color_red charms/ll:color_black)
   (define-color-pair (+grey/black+ 3) charms/ll:color_magenta charms/ll:color_black)
   (define-color-pair (+yellow/black+ 4) charms/ll:color_yellow charms/ll:color_black)
+  (define-color-pair (+blue/black+ 5) charms/ll:color_blue charms/ll:color_black)
   ;; who the hell needs magenta anyway. Grey is way more useful
-  (charms/ll:init-color charms/ll:color_magenta 132 132 132)
+  (charms/ll:init-color charms/ll:color_blue 132 132 132)
   (charms/ll:init-color charms/ll:color_red 252 5 5))
 
  ;; nabbed from http://www.tldp.org/HOWTO/NCURSES-Programming-HOWTO/color.html

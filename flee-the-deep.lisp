@@ -13,7 +13,7 @@
     :reader occupiable)
    (color
     :initarg :color
-    :initform +grey/black+
+    :initform +blue/black+
     :reader color)))
 
 (defun make-wall-tile (char)
