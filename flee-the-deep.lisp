@@ -1,5 +1,11 @@
 (in-package :flee-the-deep)
 
+(defconstant +map-width+ 250)
+(defconstant +map-height+ 80)
+
+(defvar *player*)
+(defvar *beast*)
+
 (defclass creature ()
   ((name
     :initarg :name
@@ -34,9 +40,6 @@
                        start-y y)
               and do (return-from rand-start))
       (make-creature "beast" start-x start-y #\B +red/black+))))
-
-(defvar *player*)
-(defvar *beast*)
 
 (defun safe-write-char (window char x y)
   "Bounds checking write-char-at-point"
@@ -233,9 +236,6 @@
   "Game over when beast and player occupy the same space"
   (and (= (x-coord *beast*) (x-coord *player*))
        (= (y-coord *beast*) (y-coord *player*))))
-
-(defconstant +map-width+ 40)
-(defconstant +map-height+ 40)
 
 (defun run-game ()
   (let ((map-arr (make-array (list +map-width+ +map-height+)
