@@ -1,24 +1,5 @@
 (in-package :flee-the-deep)
 
-(defclass tile ()
-  ((display-char
-    :type 'standard-char
-    :initarg :display-char
-    :initform #\.
-    :reader display-char)
-   (occupiable
-    :type 'boolean
-    :initarg :occupiable
-    :initform t
-    :reader occupiable)
-   (color
-    :initarg :color
-    :initform +blue/black+
-    :reader color)))
-
-(defun make-wall-tile (char)
-  (make-instance 'tile :display-char char :occupiable nil :color +white/black+))
-
 (defclass creature ()
   ((name
     :initarg :name
@@ -56,7 +37,6 @@
 
 (defvar *player*)
 (defvar *beast*)
-
 
 (defun safe-write-char (window char x y)
   "Bounds checking write-char-at-point"
@@ -273,21 +253,33 @@
               (aref map-arr 1 1)
               h-wall-tile
               v-wall-tile)
+    (place-exit map-arr)
     (setf *beast* (make-beast map-arr))
     (loop named game-loop for result = (game-loop map-arr) do
       (progn (charms:refresh-window charms:*standard-window*)
              (cond ((eq 'quit result) (return-from game-loop))
                    ((eq 'game-over result)
                     (display-game-over)
+                    (return-from game-loop))
+                   ((eq 'won result)
+                    (display-you-won)
                     (return-from game-loop)))))))
 
+(defun left-mazep (map-arr)
+  (with-accessors ((x x-coord) (y y-coord)) *player*
+    (exit (aref map-arr x y))))
+
 (defun game-loop (map-arr)
-  (move-beast map-arr)
-  (draw map-arr charms:*standard-window*)
-  (when (game-over-p)
-    (return-from game-loop 'game-over))
-  (process-input
-   (charms:get-char charms:*standard-window* :ignore-error t) map-arr))
+  (let ((action
+          (process-input
+           (charms:get-char charms:*standard-window* :ignore-error t)
+           map-arr)))
+    (when (left-mazep map-arr) (return-from game-loop 'won))
+    (move-beast map-arr)
+    (draw map-arr charms:*standard-window*)
+    (when (game-over-p)
+      (return-from game-loop 'game-over))
+    action))
 
 (defun create-border (map-arr tile)
   (destructuring-bind (width height) (array-dimensions map-arr)
@@ -301,16 +293,24 @@
 (defun centre-format-string (width text)
   (format nil "~~~a:@<~a~~>" width text))
 
-(defun display-game-over ()
+(defun display-message (message)
   (charms:clear-window charms:*standard-window*)
   (multiple-value-bind (width height) (charms:window-dimensions charms:*standard-window*)
-    (let ((format-string (centre-format-string width "Game Over!"))
+    (let ((format-string (centre-format-string width message))
           (y (floor (/ height 2))))
       (charms:write-string-at-point charms:*standard-window*
                                     (format nil format-string) 0 y)))
   (charms:refresh-window charms:*standard-window*)
   (sleep 1)
   (charms:get-char charms:*standard-window*))
+
+
+(defun display-game-over ()
+  (display-message "Game Over!"))
+
+
+(defun display-you-won ()
+  (display-message "You Escaped!"))
 
 
 (defun display-title-screen ()

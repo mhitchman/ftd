@@ -1,5 +1,37 @@
 (in-package :flee-the-deep)
 
+(defclass tile ()
+  ((display-char
+    :type 'standard-char
+    :initarg :display-char
+    :initform #\.
+    :reader display-char)
+   (occupiable
+    :type 'boolean
+    :initarg :occupiable
+    :initform t
+    :reader occupiable)
+   (color
+    :initarg :color
+    :initform +blue/black+
+    :reader color)
+   (exit
+    :type 'boolean
+    :initarg :exit
+    :initform nil
+    :reader exit)))
+
+(defun make-wall-tile (char)
+  (make-instance 'tile :display-char char :occupiable nil :color +white/black+))
+
+(defun make-exit-tile ()
+  (make-instance 'tile :display-char #\> :occupiable t :color +white/black+ :exit t))
+
+(defun place-exit (map-arr)
+  (let ((bottom-x (- (array-dimension map-arr 0) 2))
+        (bottom-y (- (array-dimension map-arr 1) 2)))
+    (setf (aref map-arr bottom-x bottom-y) (make-exit-tile))))
+
 (defun get-orientation (width height)
   (cond
     ((< width height) 'horizontal)
@@ -32,13 +64,6 @@
          (dx (if (eq orientation 'horizontal) 1 0))
          (dy (if (eq orientation 'horizontal) 0 1))
          (wall-length (if (eq orientation 'horizontal) width height)))
-    
-    ;; special don't block doors
-    ;; (if (eq orientation 'horizontal)
-    ;;     (when (= prev-door-y wall-y)
-    ;;       (setf door-x (1- (+ x width))))
-    ;;     (when (= prev-door-x wall-x)
-    ;;       (setf door-y (1- (+ y height)))))
     
     ;; draw the wall
     (dotimes (i wall-length)
