@@ -270,13 +270,13 @@
     (exit (aref map-arr x y))))
 
 (defun game-loop (map-arr)
+  (draw map-arr charms:*standard-window*)
   (let ((action
           (process-input
            (charms:get-char charms:*standard-window* :ignore-error t)
            map-arr)))
     (when (left-mazep map-arr) (return-from game-loop 'won))
     (move-beast map-arr)
-    (draw map-arr charms:*standard-window*)
     (when (game-over-p)
       (return-from game-loop 'game-over))
     action))
@@ -332,5 +332,4 @@
     (charms:enable-raw-input :interpret-control-characters t)
     (charms:clear-window charms:*standard-window*)
     (display-title-screen)
-    (charms:clear-window charms:*standard-window*)
     (run-game)))
