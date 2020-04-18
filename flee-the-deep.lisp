@@ -39,7 +39,7 @@
               do (setf start-x x
                        start-y y)
               and do (return-from rand-start))
-      (make-creature "beast" start-x start-y #\B +red/black+))))
+      (make-creature "beast" start-x start-y #\B +green/black+))))
 
 (defun safe-write-char (window char x y)
   "Bounds checking write-char-at-point"
