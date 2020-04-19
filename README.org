@@ -1,0 +1,9 @@
+A simple terminal game created for [[https://itch.io/jam/spring-lisp-game-jam-2020][Spring Lisp Game Jam 2020]]
+where you must find your way through a maze.
+
+** Building
+Make sure ncurses development packages are installed (libncurses-dev on Ubuntu). 
+Run the following in a terminal (ncurses won't work within Emacs)
+- Clone the repo into ~/quicklisp/local-projects or ~/common-lisp
+- =(ql:quickload 'flee-the-deep)=
+- Run with =(flee-the-deep:main)=
